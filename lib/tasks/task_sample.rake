@@ -1,23 +1,54 @@
 namespace :task_sample do
   desc "実行処理の説明"
-  task :task_model => :environment do
-    channel_info = Slack.channels_info({channel: "CE6GB9VHN"})["channel"]
-    puts User.first().name
-    puts channel_info["name"]
+  task :task_model, ['channel_id'] => :environment do |task, args|
+    channel_info = Slack.channels_info({channel: args["channel_id"]})["channel"]
 
-    # Instantiates a client
-    language = Google::Cloud::Language.new
+    channel_name = channel_info["name"]
 
-    # The text to analyze
-    text = "デザインがダサい"
+    # ID, Nameを登録
+    Channel.create(channel_id: args["channel_id"], name: channel_name)
 
-    # Detects the sentiment of the text
-    response = language.analyze_sentiment content: text, type: :PLAIN_TEXT
+    # Member 登録
+    channel_members = channel_info["members"]
 
-    # Get document sentiment from response
-    sentiment = response.document_sentiment
+    channel_members.each do |member_id|
+      member_info = Slack.users_info({user: member_id})["user"]
+      member_name = member_info["real_name"]
+      User.create(user_id: member_id, name: member_name)
+    end
 
-    puts "Text: #{text}"
-    puts "Score: #{sentiment.score}, #{sentiment.magnitude}"
+    # 会話を取得する
+    messages = Slack.channels_history({channel: args["channel_id"], count: 100})["messages"]
+
+    messages.each do |message|
+      if message["text"].include?('Query:') then
+        next
+      end
+
+      language = Google::Cloud::Language.new
+      response = language.analyze_sentiment content: message["text"], type: :PLAIN_TEXT
+      sentiment = response.document_sentiment
+
+      channel = Channel.find_by(channel_id: args["channel_id"])
+      user = User.find_by(user_id: message["user"])
+
+      check = false
+      channel.users.each_with_rel.each do |node, rel|
+        if node === user
+          check = true
+          rel.total_message_count = rel.total_message_count + 1
+          rel.sentimental_score = ((rel.sentimental_score + sentiment.score.round(3)) / 2).round(3)
+          rel.save!
+          break
+        end
+      end
+
+      if check then
+        next
+      end
+
+      Join.create(from_node: user, to_node: channel, total_message_count: 1,sentimental_score: sentiment.score.round(3))
+    end
+
  end
 end
