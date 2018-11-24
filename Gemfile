@@ -59,3 +59,4 @@ gem 'tzinfo-data', platforms: [:mingw, :mswin, :x64_mingw, :jruby]
 gem 'neo4j', '~> 9.2.0'
 gem 'neo4j-rake_tasks'
 gem 'slack-api'
+gem 'google-cloud-language'

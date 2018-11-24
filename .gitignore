@@ -25,3 +25,6 @@
 
 # Ignore slack-api-key
 /config/initializers/slack_api.rb
+
+# Ignore tmporary
+/script/*
