@@ -37,7 +37,7 @@ namespace :task_sample do
         if node === user
           check = true
           rel.total_message_count = rel.total_message_count + 1
-          rel.sentimental_score = ((rel.sentimental_score + sentiment.score.round(3)) / 2).round(3)
+          rel.sentimental_score = ((rel.sentimental_score + sentiment.score) / 2).round(3)
           rel.save!
           break
         end
